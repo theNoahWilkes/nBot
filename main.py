@@ -18,33 +18,61 @@ def verify_request(request: Request) -> None:
     pass
 
 
+def chat_reply(text: str) -> dict:
+    return {
+        "hostAppDataAction": {
+            "chatDataAction": {
+                "createMessageAction": {
+                    "message": {"text": text}
+                }
+            }
+        }
+    }
+
+
+def build_reply(response) -> dict:
+    if isinstance(response, dict) and "message" in response:
+        return {
+            "hostAppDataAction": {
+                "chatDataAction": {
+                    "createMessageAction": {
+                        "message": response["message"]
+                    }
+                }
+            }
+        }
+    return chat_reply(str(response))
+
+
 @app.post("/webhook")
 async def webhook(request: Request):
     verify_request(request)
 
     event = await request.json()
-    event_type = event.get("type")
-    logger.info("Received event: type=%s", event_type)
+    chat = event.get("chat", {})
+    logger.info("Received event keys: %s", list(chat.keys()))
 
-    if event_type == "ADDED_TO_SPACE":
-        space = event.get("space", {}).get("name", "unknown space")
+    if "addedToSpacePayload" in chat:
+        space = chat.get("addedToSpacePayload", {}).get("space", {}).get("name", "unknown space")
         logger.info("Bot added to %s", space)
-        return {"text": "hey, I'm nBot. say 'ping' or 'roll 2d6'."}
+        return chat_reply("hey, I'm nBot. say 'ping' or 'roll 2d6'.")
 
-    if event_type == "REMOVED_FROM_SPACE":
+    if "removedFromSpacePayload" in chat:
         logger.info("Bot removed from space")
         return {}
 
-    if event_type == "MESSAGE":
-        message = event.get("message", {})
+    if "messagePayload" in chat:
+        payload = chat["messagePayload"]
+        message = payload.get("message", {})
         text = message.get("text", "").strip()
         sender = message.get("sender", {})
-        space = event.get("space", {}).get("name", "")
+        space = payload.get("space", {}).get("name", "")
 
         response = dispatch(text, sender, space)
         if response is not None:
-            return {"text": response}
+            return build_reply(response)
         return {}
 
-    # Unknown event type — acknowledge with empty 200
+    # Unknown event shape — log and acknowledge
+    logger.warning("Unrecognized event shape: %s", list(event.keys()))
     return {}
