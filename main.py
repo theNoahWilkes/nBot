@@ -69,8 +69,8 @@ def build_reply(response) -> dict:
 
 @app.get("/")
 async def index():
-    from fastapi.responses import HTMLResponse
-    return HTMLResponse("<html><body><p>nothing to see here</p></body></html>")
+    from fastapi.responses import Response
+    return Response(status_code=204)
 
 
 @app.post("/webhook")
