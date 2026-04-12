@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 BOT_PUBLIC_URL = os.getenv("BOT_PUBLIC_URL", "").rstrip("/")
 
-app = FastAPI()
+app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 
 # Reused across requests — caches Google's public keys after the first fetch.
 _google_transport = google_requests.Request()
@@ -65,6 +65,12 @@ def build_reply(response) -> dict:
             }
         }
     return chat_reply(str(response))
+
+
+@app.get("/")
+async def index():
+    from fastapi.responses import HTMLResponse
+    return HTMLResponse("<html><body><p>nothing to see here</p></body></html>")
 
 
 @app.post("/webhook")
