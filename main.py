@@ -93,7 +93,7 @@ async def webhook(request: Request):
     if "messagePayload" in chat:
         payload = chat["messagePayload"]
         message = payload.get("message", {})
-        text = message.get("text", "").strip()
+        text = message.get("argumentText", message.get("text", "")).strip()
         sender = message.get("sender", {})
         space = payload.get("space", {}).get("name", "")
 
