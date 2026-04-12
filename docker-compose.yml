@@ -1,0 +1,8 @@
+services:
+  nbot:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "3211:8000"
+    env_file:
+      - .env

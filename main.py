@@ -1,21 +1,44 @@
 import logging
+import os
+from dotenv import load_dotenv
 from fastapi import FastAPI, Request, HTTPException
+
+load_dotenv()
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
 from dispatcher import dispatch
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
+BOT_PUBLIC_URL = os.getenv("BOT_PUBLIC_URL", "").rstrip("/")
+
 app = FastAPI()
+
+# Reused across requests — caches Google's public keys after the first fetch.
+_google_transport = google_requests.Request()
 
 
 def verify_request(request: Request) -> None:
-    """
-    TODO: validate that the incoming request is actually from Google Chat.
-    Google sends a signed Bearer JWT in the Authorization header.
-    For now this is a no-op stub — do NOT leave this open in production.
-    See: https://developers.google.com/chat/api/guides/message-formats/events#verifying_requests
-    """
-    pass
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing Bearer token")
+
+    token = auth_header.removeprefix("Bearer ")
+
+    if not BOT_PUBLIC_URL:
+        logger.error("BOT_PUBLIC_URL is not set — cannot verify request audience")
+        raise HTTPException(status_code=500, detail="Bot misconfigured")
+
+    try:
+        id_token.verify_oauth2_token(
+            token,
+            _google_transport,
+            audience=f"{BOT_PUBLIC_URL}/webhook",
+        )
+    except Exception as e:
+        logger.warning("Request verification failed: %s", e)
+        raise HTTPException(status_code=401, detail="Unauthorized")
 
 
 def chat_reply(text: str) -> dict:
