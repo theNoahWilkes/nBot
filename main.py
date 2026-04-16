@@ -84,7 +84,7 @@ async def webhook(request: Request):
     if "addedToSpacePayload" in chat:
         space = chat.get("addedToSpacePayload", {}).get("space", {}).get("name", "unknown space")
         logger.info("Bot added to %s", space)
-        return chat_reply("hey, I'm nBot. say 'ping' or 'roll 2d6'.")
+        return chat_reply("👋 Hey, I'm *nBot* — a bot for your friend group chat. I can roll dice, find Simpsons and Futurama scenes, and preview tweets. Type *help* to see all commands.")
 
     if "removedFromSpacePayload" in chat:
         logger.info("Bot removed from space")
