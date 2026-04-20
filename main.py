@@ -102,6 +102,29 @@ async def webhook(request: Request):
             return build_reply(response)
         return {}
 
+    if "appCommandPayload" in chat:
+        payload = chat["appCommandPayload"]
+        command_id = str(int(payload.get("appCommandMetadata", {}).get("appCommandId", 0)))
+        argument_text = payload.get("message", {}).get("argumentText", "").strip()
+        sender = payload.get("message", {}).get("sender", {})
+        space = payload.get("space", {}).get("name", "")
+        logger.info("slash command id=%s argument=%r", command_id, argument_text)
+
+        # Map command IDs to equivalent text and run through the dispatcher
+        command_text = {
+            "1": "ping",
+            "2": f"roll {argument_text}".strip() if argument_text else "roll 1d6",
+            "3": f"frink {argument_text}".strip(),
+            "4": f"morb {argument_text}".strip(),
+            "1000": "help",
+        }.get(command_id)
+
+        if command_text:
+            response = dispatch(command_text, sender, space)
+            if response is not None:
+                return build_reply(response)
+        return {}
+
     # Unknown event shape — log and acknowledge
     logger.warning("Unrecognized event shape: %s", list(event.keys()))
     return {}
