@@ -93,13 +93,20 @@ async def webhook(request: Request):
     if "messagePayload" in chat:
         payload = chat["messagePayload"]
         message = payload.get("message", {})
-        text = message.get("argumentText", message.get("text", "")).strip()
+        text = (
+            message.get("matchedUrl", {}).get("url")
+            or message.get("argumentText")
+            or message.get("text", "")
+        ).strip()
         sender = message.get("sender", {})
         space = payload.get("space", {}).get("name", "")
+        logger.info("dispatching text=%r", text)
 
         response = dispatch(text, sender, space)
         if response is not None:
-            return build_reply(response)
+            reply = build_reply(response)
+            logger.info("sending reply: %s", reply)
+            return reply
         return {}
 
     if "appCommandPayload" in chat:
