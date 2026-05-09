@@ -67,6 +67,16 @@ def build_reply(response) -> dict:
     return chat_reply(str(response))
 
 
+def _resolve_slash_command(command_id: str, argument_text: str) -> str | None:
+    return {
+        "1": "ping",
+        "3": f"frink {argument_text}".strip(),
+        "4": f"morb {argument_text}".strip(),
+        "5": f"rick {argument_text}".strip(),
+        "1000": "help",
+    }.get(command_id)
+
+
 @app.get("/")
 async def index():
     from fastapi.responses import Response
@@ -93,13 +103,27 @@ async def webhook(request: Request):
     if "messagePayload" in chat:
         payload = chat["messagePayload"]
         message = payload.get("message", {})
+        sender = message.get("sender", {})
+        space = payload.get("space", {}).get("name", "")
+
+        # Slash commands sent in DMs arrive as messagePayload with slashCommand set
+        slash = message.get("slashCommand", {})
+        if slash:
+            command_id = str(slash.get("commandId", ""))
+            argument_text = message.get("argumentText", "").strip()
+            logger.info("slash command (messagePayload) id=%s argument=%r", command_id, argument_text)
+            command_text = _resolve_slash_command(command_id, argument_text)
+            if command_text:
+                response = dispatch(command_text, sender, space)
+                if response is not None:
+                    return build_reply(response)
+            return {}
+
         text = (
             message.get("matchedUrl", {}).get("url")
             or message.get("argumentText")
             or message.get("text", "")
         ).strip()
-        sender = message.get("sender", {})
-        space = payload.get("space", {}).get("name", "")
         logger.info("dispatching text=%r", text)
 
         response = dispatch(text, sender, space)
@@ -117,15 +141,7 @@ async def webhook(request: Request):
         space = payload.get("space", {}).get("name", "")
         logger.info("slash command id=%s argument=%r", command_id, argument_text)
 
-        # Map command IDs to equivalent text and run through the dispatcher
-        command_text = {
-            "1": "ping",
-            "3": f"frink {argument_text}".strip(),
-            "4": f"morb {argument_text}".strip(),
-            "5": f"rick {argument_text}".strip(),
-            "1000": "help",
-        }.get(command_id)
-
+        command_text = _resolve_slash_command(command_id, argument_text)
         if command_text:
             response = dispatch(command_text, sender, space)
             if response is not None:

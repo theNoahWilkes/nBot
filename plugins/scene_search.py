@@ -52,7 +52,7 @@ def _weighted_choice(results: list) -> dict:
 def _fetch_meme(query: str, site: dict) -> str:
     base = site["base_url"]
 
-    results = requests.get(f"{base}/api/search?q={query}", timeout=10).json()
+    results = requests.get(f"{base}/api/search", params={"q": query}, timeout=10).json()
     if not results:
         return None
 
