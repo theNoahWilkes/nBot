@@ -10,12 +10,12 @@ Triggers:
     rick <query>               → Rick and Morty (masterofallscience.com)
 """
 
+import base64
+import json
 import logging
 import math
 import re
-from base64 import urlsafe_b64encode as b64encode
 from random import choice, choices
-from textwrap import fill
 
 import requests
 
@@ -25,21 +25,14 @@ SITES = [
     {
         "pattern": re.compile(r"^frin(?:k|kiac)?\s+(.+)", re.IGNORECASE),
         "base_url": "https://frinkiac.com",
-        "max_line": 25,
-        "weighted": True,   # Poisson-weighted toward better matches
+        "weighted": True,
     },
     {
         "pattern": re.compile(r"^morb(?:o|otron)?\s+(.+)", re.IGNORECASE),
         "base_url": "https://morbotron.com",
-        "max_line": 23,
-        "weighted": True,  # Poisson-weighted toward better matches
-    },
-    {
-        "pattern": re.compile(r"^rick\s+(.+)", re.IGNORECASE),
-        "base_url": "https://masterofallscience.com",
-        "max_line": 24,
         "weighted": True,
     },
+
 ]
 
 
@@ -49,7 +42,7 @@ def _weighted_choice(results: list) -> dict:
     return choices(results, weights=weights)[0]
 
 
-def _fetch_meme(query: str, site: dict) -> str:
+def _fetch_meme(query: str, site: dict) -> str | None:
     base = site["base_url"]
 
     results = requests.get(f"{base}/api/search", params={"q": query}, timeout=10).json()
@@ -61,13 +54,15 @@ def _fetch_meme(query: str, site: dict) -> str:
 
     try:
         caption_data = requests.get(f"{base}/api/caption?e={ep}&t={ts}", timeout=10).json()
-        caption = fill(" ".join(s["Content"] for s in caption_data["Subtitles"]), site["max_line"])
+        caption = " ".join(s["Content"] for s in caption_data["Subtitles"]).strip()
     except Exception:
         logger.warning("caption fetch failed for %s, using empty caption", base)
         caption = ""
 
-    encoded = b64encode(caption.encode()).decode()
-    return f"{base}/meme/{ep}/{ts}.jpg?b64lines={encoded}"
+    overlays = [{"t": caption, "f": "akbar", "s": 0, "c": "ffffffff", "x": 50, "y": 97, "a": "c", "b": 0, "d": 0, "u": 1}] if caption else []
+    panels = [{"e": ep, "ts": ts, "o": overlays}]
+    b64 = base64.urlsafe_b64encode(json.dumps(panels, separators=(',', ':')).encode()).decode()
+    return f"{base}/comic/img?b64={b64}"
 
 
 def handle(text: str, sender: dict, space: str):
@@ -93,15 +88,13 @@ def handle(text: str, sender: dict, space: str):
                 "cardsV2": [{
                     "cardId": "scene-meme",
                     "card": {
-                        "sections": [{
-                            "widgets": [{
-                                "image": {
-                                    "imageUrl": meme_url,
-                                    "altText": query,
-                                    "onClick": {"openLink": {"url": meme_url}},
-                                }
-                            }]
-                        }]
+                        "sections": [{"widgets": [{
+                            "image": {
+                                "imageUrl": meme_url,
+                                "altText": query,
+                                "onClick": {"openLink": {"url": meme_url}},
+                            }
+                        }]}]
                     }
                 }]
             }

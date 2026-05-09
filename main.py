@@ -72,7 +72,6 @@ def _resolve_slash_command(command_id: str, argument_text: str) -> str | None:
         "1": "ping",
         "3": f"frink {argument_text}".strip(),
         "4": f"morb {argument_text}".strip(),
-        "5": f"rick {argument_text}".strip(),
         "1000": "help",
     }.get(command_id)
 
