@@ -120,9 +120,9 @@ async def webhook(request: Request):
         # Map command IDs to equivalent text and run through the dispatcher
         command_text = {
             "1": "ping",
-            "2": f"roll {argument_text}".strip() if argument_text else "roll 1d6",
             "3": f"frink {argument_text}".strip(),
             "4": f"morb {argument_text}".strip(),
+            "5": f"rick {argument_text}".strip(),
             "1000": "help",
         }.get(command_id)
 

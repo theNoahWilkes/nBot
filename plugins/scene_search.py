@@ -7,6 +7,7 @@ To add a new site, add an entry to SITES.
 Triggers:
     frink / frinkiac <query>   → Simpsons (frinkiac.com)
     morb / morbotron <query>   → Futurama (morbotron.com)
+    rick <query>               → Rick and Morty (masterofallscience.com)
 """
 
 import logging
@@ -32,6 +33,12 @@ SITES = [
         "base_url": "https://morbotron.com",
         "max_line": 23,
         "weighted": True,  # Poisson-weighted toward better matches
+    },
+    {
+        "pattern": re.compile(r"^rick\s+(.+)", re.IGNORECASE),
+        "base_url": "https://masterofallscience.com",
+        "max_line": 24,
+        "weighted": True,
     },
 ]
 
