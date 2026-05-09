@@ -34,32 +34,31 @@ def handle(text: str, sender: dict, space: str):
         )
         resp.raise_for_status()
         data = resp.json()
+        return {
+            "message": {
+                "cardsV2": [{
+                    "cardId": f"yt-{video_id}",
+                    "card": {
+                        "header": {
+                            "title": data["title"],
+                            "subtitle": data["author_name"],
+                        },
+                        "sections": [{
+                            "widgets": [{
+                                "image": {
+                                    "imageUrl": data["thumbnail_url"],
+                                    "altText": data["title"],
+                                    "onClick": {"openLink": {"url": video_url}},
+                                }
+                            }]
+                        }]
+                    }
+                }]
+            }
+        }
     except requests.HTTPError as e:
         logger.warning("YouTube oEmbed request failed: %s", e)
         return "couldn't fetch that video (private or deleted?)"
     except Exception:
         logger.exception("ytpic failed for %s", video_id)
         return "couldn't fetch that video"
-
-    return {
-        "message": {
-            "cardsV2": [{
-                "cardId": f"yt-{video_id}",
-                "card": {
-                    "header": {
-                        "title": data["title"],
-                        "subtitle": data["author_name"],
-                    },
-                    "sections": [{
-                        "widgets": [{
-                            "image": {
-                                "imageUrl": data["thumbnail_url"],
-                                "altText": data["title"],
-                                "onClick": {"openLink": {"url": video_url}},
-                            }
-                        }]
-                    }]
-                }
-            }]
-        }
-    }
